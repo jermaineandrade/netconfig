@@ -3,13 +3,13 @@ extern crate nix;
 extern crate libc;
 
 use std::collections::HashMap;
-use clap::{Arg, App};
+use clap::{Arg, App, AppSettings};
 use nix::ifaddrs::InterfaceAddress;
 use nix::net::if_::InterfaceFlags;
 use nix::sys::socket::SockAddr;
 
 fn main() {
-    let matches = App::new("Network Interface Command Line Tool")
+    let user_arguments = App::new("Network Interface Command Line Tool")
                             .version("1.0")
                             .author("Jermaine Andrade")
                             .about("Retrieve basic network interface information")
@@ -17,22 +17,37 @@ fn main() {
                                 .short("d")
                                 .long("device")
                                 .value_name("INTERFACE NAME"))
+                            .setting(AppSettings::ArgRequiredElseHelp)
                             .get_matches();
 
-    //TODO Error handling around argument handling
-    let device_name = matches.value_of("device").unwrap();
+    if let Some(device) = user_arguments.value_of("device") {
+        output_device_information(device)
+    }
+}
 
+fn output_device_information(device_name: &str) {
+    let interface_info = get_interface_addresses(device_name.to_string());
+    let mut interface_output: String;
+    if interface_info.len() == 0 {
+        interface_output = "Device information not found.".to_string();
+    }
+    else {
+        interface_output = compose_interface_output(interface_info);
+    }
+    println!("{}", interface_output)
+}
+
+fn get_interface_addresses(if_name: String) -> Vec<InterfaceAddress> {
     let address_iterator = nix::ifaddrs::getifaddrs().unwrap();
     let mut if_addresses = Vec::new();
 
     for ifaddr in address_iterator {
-        if ifaddr.interface_name == device_name {
+        if ifaddr.interface_name == if_name {
             if_addresses.push(ifaddr);
         }
     }
 
-    let interface_output = compose_interface_output(if_addresses);
-    println!("{}", interface_output)
+    if_addresses
 }
 
 fn compose_interface_output(interface_addresses: Vec<InterfaceAddress>) -> String {
