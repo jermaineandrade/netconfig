@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use clap::{Arg, App};
 use nix::ifaddrs::InterfaceAddress;
 use nix::net::if_::InterfaceFlags;
+use std::net::IpAddr;
+use nix::sys::socket::SockAddr;
 
 fn main() {
     let matches = App::new("Network Interface Command Line Tool")
@@ -20,25 +22,34 @@ fn main() {
 
     //TODO Error handling around argument handling
     let device_name = matches.value_of("device").unwrap();
-    //println!("Specified device: {}", device_name);
 
     let address_iterator = nix::ifaddrs::getifaddrs().unwrap();
-    let mut interface_addresses = Vec::new();
+    let mut if_addresses = Vec::new();
 
     for ifaddr in address_iterator {
         if ifaddr.interface_name == device_name {
-            interface_addresses.push(ifaddr);
-            //println!("Interface Name: {}, Address {:?}", ifaddr.interface_name, ifaddr);
+            if_addresses.push(ifaddr);
         }
     }
-    compose_interface_output(&interface_addresses[0]);
+    compose_interface_output(if_addresses);
 }
 
-fn compose_interface_output(interface_address: &InterfaceAddress) -> String {
-    let flags = parse_interface_flags(&interface_address.flags);
-    let flag_output = compose_flag_output(flags);
+fn compose_interface_output(interface_addresses: Vec<InterfaceAddress>) -> String {
+    let mut interface_outputs: Vec<String> = Vec::new();
+    let name_output: String = interface_addresses[0].interface_name.clone();
+    interface_outputs.push(name_output);
+    //println!("{}", name_output);
 
-    println!("Flags: {}", flag_output);
+    let flags: HashMap<String, bool> = parse_interface_flags(&interface_addresses[0].flags);
+    let flag_output: String = compose_flag_output(flags);
+    interface_outputs.push(flag_output);
+    //println!("Flags: {}", flag_output);
+
+    let addresses = parse_interface_addresses(&interface_addresses);
+    //let address_output = compose_address_output(addresses);
+    //interface_outputs.push(address_output);
+    //return interface_outputs.join("\n");
+    //println!("{:?}", interface_outputs.join('\n'));
     return String::from(" ");
 }
 
@@ -49,7 +60,27 @@ fn parse_interface_flags(flags: &InterfaceFlags) -> HashMap<String, bool> {
     if_flags.insert("running".to_string(), InterfaceFlags::bits(flags) & libc::IFF_RUNNING != 0);
     if_flags.insert("up".to_string(), InterfaceFlags::bits(flags) & libc::IFF_UP != 0);
 
-    return if_flags
+    if_flags
+}
+
+
+fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<String, String> {
+    let mut type_and_address = HashMap::new();
+
+    for if_address_values in if_addresses.iter() {
+        let if_address = if_address_values.address.unwrap();
+        let mut address_type = String::new();
+        
+        match if_address {
+            SockAddr::Inet(_) => address_type = "Inet".to_string(),
+            SockAddr::Link(_) => address_type = "Link".to_string(),
+            SockAddr::Unix(_) => address_type = "Unix".to_string(),
+            _ => address_type = "".to_string(),
+        }
+        type_and_address.insert(address_type, if_address.to_string());
+    }
+
+    type_and_address
 }
 
 fn compose_flag_output(flags: HashMap<String, bool>) -> String {
@@ -58,12 +89,12 @@ fn compose_flag_output(flags: HashMap<String, bool>) -> String {
 
     for (flag, has_flag) in flags {
         if has_flag == true {
-            //flag_output.push_str(&flag);
-            //flag_output.push_str(",")
             flags_set_true.push(flag);
         }
     }
+
     flag_output.push_str(&flags_set_true.join(","));
     flag_output.push_str(">");
-    return flag_output;
+
+    flag_output
 }
