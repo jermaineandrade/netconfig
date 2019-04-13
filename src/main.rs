@@ -68,9 +68,14 @@ fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<St
     let mut type_and_address = HashMap::new();
 
     for if_address_values in if_addresses.iter() {
-        let if_address = if_address_values.address.unwrap();
-        let mut address_type = String::new();
+        let if_address;
 
+        match if_address_values.address {
+            Some(sock_addr_type) => if_address = sock_addr_type,
+            None => continue,
+        }
+
+        let mut address_type = String::new();
         match if_address {
             SockAddr::Inet(_) => address_type = "Inet".to_string(),
             SockAddr::Link(_) => address_type = "Link".to_string(),
