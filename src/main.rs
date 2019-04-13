@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use clap::{Arg, App};
 use nix::ifaddrs::InterfaceAddress;
 use nix::net::if_::InterfaceFlags;
-use std::net::IpAddr;
 use nix::sys::socket::SockAddr;
 
 fn main() {
@@ -31,26 +30,27 @@ fn main() {
             if_addresses.push(ifaddr);
         }
     }
-    compose_interface_output(if_addresses);
+
+    let interface_output = compose_interface_output(if_addresses);
+    println!("{}", interface_output)
 }
 
 fn compose_interface_output(interface_addresses: Vec<InterfaceAddress>) -> String {
     let mut interface_outputs: Vec<String> = Vec::new();
     let name_output: String = interface_addresses[0].interface_name.clone();
     interface_outputs.push(name_output);
-    //println!("{}", name_output);
 
     let flags: HashMap<String, bool> = parse_interface_flags(&interface_addresses[0].flags);
     let flag_output: String = compose_flag_output(flags);
     interface_outputs.push(flag_output);
-    //println!("Flags: {}", flag_output);
 
-    let addresses = parse_interface_addresses(&interface_addresses);
-    //let address_output = compose_address_output(addresses);
-    //interface_outputs.push(address_output);
-    //return interface_outputs.join("\n");
-    //println!("{:?}", interface_outputs.join('\n'));
-    return String::from(" ");
+    let types_and_addresses: HashMap<String, String> = parse_interface_addresses(&interface_addresses);
+    let address_output: String = compose_address_output(types_and_addresses);
+    interface_outputs.push(address_output);
+
+    let interface_output: String =  interface_outputs.join("\n");
+
+    interface_output
 }
 
 fn parse_interface_flags(flags: &InterfaceFlags) -> HashMap<String, bool> {
@@ -70,7 +70,7 @@ fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<St
     for if_address_values in if_addresses.iter() {
         let if_address = if_address_values.address.unwrap();
         let mut address_type = String::new();
-        
+
         match if_address {
             SockAddr::Inet(_) => address_type = "Inet".to_string(),
             SockAddr::Link(_) => address_type = "Link".to_string(),
@@ -83,8 +83,17 @@ fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<St
     type_and_address
 }
 
+fn compose_address_output(types_and_addresses: HashMap<String, String>) -> String {
+    let mut address_output = String::new();
+
+    for (addr_type, address) in types_and_addresses {
+        address_output += &(addr_type + " " + &address + "\n");
+    }
+    address_output
+}
+
 fn compose_flag_output(flags: HashMap<String, bool>) -> String {
-    let mut flag_output = String::from("<");
+    let mut flag_output = String::from("Flags: <");
     let mut flags_set_true: Vec<String>  = Vec::new();
 
     for (flag, has_flag) in flags {
