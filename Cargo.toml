@@ -1,0 +1,10 @@
+[package]
+name = "netconfig"
+version = "0.1.0"
+authors = ["jermaine"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32.0"
+nix = "0.13.0"
+libc = "0.2.51"
