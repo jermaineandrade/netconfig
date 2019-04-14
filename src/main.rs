@@ -59,8 +59,8 @@ fn compose_interface_output(interface_addresses: Vec<InterfaceAddress>) -> Strin
     let flag_output: String = compose_flag_output(flags);
     interface_outputs.push(flag_output);
 
-    let types_and_addresses: HashMap<String, String> = parse_interface_addresses(&interface_addresses);
-    let address_output: String = compose_address_output(types_and_addresses);
+    let addresses_and_types: HashMap<String, String> = parse_interface_addresses(&interface_addresses);
+    let address_output: String = compose_address_output(addresses_and_types);
     interface_outputs.push(address_output);
 
     let interface_output: String =  interface_outputs.join("\n");
@@ -80,7 +80,7 @@ fn parse_interface_flags(flags: &InterfaceFlags) -> HashMap<String, bool> {
 
 
 fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<String, String> {
-    let mut type_and_address = HashMap::new();
+    let mut address_and_type = HashMap::new();
 
     for if_address_values in if_addresses.iter() {
         let if_address;
@@ -97,16 +97,16 @@ fn parse_interface_addresses(if_addresses: &Vec<InterfaceAddress>) -> HashMap<St
             SockAddr::Unix(_) => address_type = "Unix".to_string(),
             _ => address_type = "".to_string(),
         }
-        type_and_address.insert(address_type, if_address.to_string());
+        address_and_type.insert(if_address.to_string(), address_type);
     }
 
-    type_and_address
+    address_and_type
 }
 
-fn compose_address_output(types_and_addresses: HashMap<String, String>) -> String {
+fn compose_address_output(addresses_and_types: HashMap<String, String>) -> String {
     let mut address_output = String::new();
 
-    for (addr_type, address) in types_and_addresses {
+    for (address, addr_type) in addresses_and_types {
         address_output += &(addr_type + " " + &address + "\n");
     }
     address_output
